@@ -6,7 +6,6 @@ example = None
 if os.path.isfile("dict.pickle"):
     print("Exist")
     pickle_in = open("dict.pickle", "rb")
-    # pickle_app = open("dict.pickle", "wb")
     dicts = pickle.load(pickle_in)
     print(dicts)
     pickle_in.close()

@@ -3,6 +3,24 @@ from bs4 import BeautifulSoup
 from os import system, name
 import pickle
 import os.path
+import shutil
+
+# ******************************************** #
+
+# **********Prerequirements*************#
+# 1.Beautifulsoup - pip install beautifulsoup4
+# 2.Requests - pip install requests
+
+# ********Future scopes**********#
+# when the program is hosted on a web hosting server the program can be run from anywhere
+# the products price list can be send through emails
+# the program can be upgraded so that when a products price decreases beyond a limit a mail notification will be send to user
+# auto ordering of specific products can be implemented by integrating the product with selenium(a python automation package)
+
+# ******************************************** #
+
+# gets terminal size
+columns = shutil.get_terminal_size().columns
 
 headers = {
     "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36'}  # header for smooth browsing
@@ -18,9 +36,8 @@ def clear():
     else:
         _ = system('clear')
 
+
 # product price details
-
-
 def get_details(URL, choice):
     clear()
     page = requests.get(URL, headers=headers)  # get data from website
@@ -28,18 +45,41 @@ def get_details(URL, choice):
 
     if choice == "1":
         title = soup.find(id="productTitle").get_text().strip()
+        # gets actual price of the product if it is given, mrp[0] will be empty if actual price is not shown
         mrp = soup.findAll(
             "span", {"class": "priceBlockStrikePriceString a-text-strike"})
-        deal = soup.find(id="priceblock_dealprice").get_text().strip()
-        print(title, " ", mrp[0].get_text().strip(), " ", deal)
+        if mrp != []:
+            mrp = mrp[0].get_text().strip()
+        else:
+            # if the actual price is not given  we set mrp to this
+            mrp = "actual price not available"
+        try:
+            # deal price which is available in amazon
+            deal = soup.find(id="priceblock_dealprice")
+            # special amazon price NOTE: only deal price or amazon price will be given at a single time for a product
+            amazonprice = soup.find(id="priceblock_ourprice")
+            if deal:
+                print(title, " ", mrp,
+                      " ", deal.get_text().strip())
+            elif amazonprice:
+                print(title, " ", mrp,
+                      " ", amazonprice.get_text().strip())
+            else:
+                print(title, " ", mrp[0])
+        except:
+            print("Something went wrong please try again")
     elif choice == "2":
-        title = soup.findAll("span", {"class": "_35KyD6"})
+        title = soup.findAll("span", {"class": "B_NuCI"})
         mrp = soup.findAll(
-            "div", {"class": "_3auQ3N _1POkHg"})
-        deal = soup.findAll(
-            "div", {"class": "_1vC4OE _3qQ9m1"})
-        print(title[0].get_text().strip(), " ",
-              mrp[0].get_text().strip(), " ", deal[0].get_text().strip())
+            "div", {"class": "_30jeq3 _16Jk6d"})
+        try:
+            deal = soup.findAll(
+                "div", {"class": "_3I9_wc _2p6lqe"})
+            print(title[0].get_text().strip(), " ",
+                  mrp[0].get_text().strip(), " ", deal[0].get_text().strip())
+        except:
+            print("Something went wron please try again")
+
 # products list
 
 
@@ -53,13 +93,16 @@ def products_details(products):
             page = requests.get(url, headers=headers)  # get data from website
             # get page content
             soup = BeautifulSoup(page.content, 'html.parser')
-            title = soup.findAll("span", {"class": "_35KyD6"})
-            mrp = soup.findAll(
-                "div", {"class": "_3auQ3N _1POkHg"})
-            deal = soup.findAll(
-                "div", {"class": "_1vC4OE _3qQ9m1"})
-            print(c, ". ", title[0].get_text().strip(), " ",
-                  mrp[0].get_text().strip(), " ", deal[0].get_text().strip())
+            try:
+                title = soup.findAll("span", {"class": "B_NuCI"})
+                mrp = soup.findAll(
+                    "div", {"class": "_30jeq3 _16Jk6d"})
+                deal = soup.findAll(
+                    "div", {"class": "_3I9_wc _2p6lqe"})
+                print(c, ". ", title[0].get_text().strip(), " ",
+                      mrp[0].get_text().strip(), " ", deal[0].get_text().strip())
+            except:
+                print("Error while fetching product details")
             c += 1
     if products.get("amazon"):
         links = products["amazon"]
@@ -72,18 +115,35 @@ def products_details(products):
             title = soup.find(id="productTitle").get_text().strip()
             mrp = soup.findAll(
                 "span", {"class": "priceBlockStrikePriceString a-text-strike"})
-            deal = soup.find(id="priceblock_dealprice").get_text().strip()
-            print(c, ". ", title, " ", mrp[0].get_text().strip(), " ", deal)
+            if mrp != []:
+                mrp = mrp[0].get_text().strip()
+            else:
+                mrp = "actual price not available"
+            deal = soup.find(id="priceblock_dealprice")
+            amazonprice = soup.find(id="priceblock_ourprice")
+            # used mrp because findAll returns a list even if only one data is returned
+            try:
+                if deal:
+                    print(c, ". ", title, " ", mrp,
+                          " ", deal.get_text().strip())
+                elif amazonprice:
+                    print(c, ". ", title, " ", mrp,
+                          " ", amazonprice.get_text().strip())
+                else:
+                    print(c, ". ", title, " ", mrp)
+            except:
+                print("Something went wrong")
             c += 1
 
 
 def main():
     clear()
     # infinite while loop for menu
+    # sendmail()
     while True:
         # get user choice for website
         choice = input(
-            "\n\n\nSelect the website\n1.Amazon\n2.Flipkart\n3.Add data to file\n4.Current products\n5.Quit  : ")
+            "\n\n\nSelect the website\n1.Amazon\n2.Flipkart\n3.Add data to file\n4.Current products\n5.Quit  : ".center(columns))
         clear()
         if choice == "1":
             print("Amazon\n")
@@ -104,7 +164,6 @@ def main():
                     pickle_in = open("products.pickle", "rb")
                     # gets current filedata
                     products = pickle.load(pickle_in)
-                    print(products)
                     pickle_in.close()
                     pickle_out = open("products.pickle", "wb")
                     # checking if url is from flipkart or amazon
@@ -141,10 +200,13 @@ def main():
                 pickle_out.close()
                 print("New file created")
         elif choice == "4":
-            pickle_in = open("products.pickle", "rb")
-            products = pickle.load(pickle_in)
-            products_details(products)
-            pickle_in.close()
+            try:
+                pickle_in = open("products.pickle", "rb")
+                products = pickle.load(pickle_in)
+                products_details(products)
+                pickle_in.close()
+            except:
+                print("No products available")
         elif choice == "5":
             clear()
             break
